@@ -157,15 +157,16 @@
      (offset (ly:grob-relative-coordinate grob refp-X X))
 
      (padding (ly:grob-property grob 'padding 0.3))
+     (shorten-pair (ly:grob-property grob 'shorten-pair (cons 0 0)))
      (frame-X-extent (interval-widen (ly:relative-group-extent elts refp-X X) padding))
+     (frame-X-extent (cons (+ (car frame-X-extent) (car shorten-pair)) (- (cdr frame-X-extent) (cdr shorten-pair))) )
      (border-width (ly:grob-property grob 'border-width 0.25))
-     (yext (interval-widen (ly:relative-group-extent elts refp-Y Y) (+ padding border-width))) 
+     (yext (interval-widen (ly:relative-group-extent elts refp-Y Y) (+ padding border-width)))
      ; unlike the anaLYsis version with user-defined yext, border-width should make the boxes grow OUTward
      (color (ly:grob-property grob 'color (rgb-color 0.8  0.8  1.0)))
      (border-color (ly:grob-property grob 'border-color (rgb-color 0.3  0.3  0.9)))
      (bb-pad (ly:grob-property grob 'broken-bound-padding 4))
      (border-radius (ly:grob-property grob 'border-radius 0))
-     (shorten-pair (ly:grob-property grob 'shorten-pair (cons 0 0)))
      (y-lower (car yext))
      (y-upper (cdr yext))
      (l-zigzag-width (ly:grob-property grob 'l-zigzag-width 0))
@@ -200,7 +201,6 @@
            (= -1 (ly:item-break-dir (ly:spanner-bound grob RIGHT)))))
      (stil empty-stencil)
 
-
      (layout (ly:grob-layout grob))
      (caption-props (ly:grob-alist-chain grob (ly:output-def-lookup layout 'text-font-defaults)))
      (caption-stencil empty-stencil)
@@ -220,6 +220,13 @@
      (caption-mid-x 0)
      (caption-angle 0)
      (caption-angle-rad 0)
+
+     ; for rounding zigzag widths to nearest sensible value:
+     (dist-y (- y-upper y-lower))
+     (cnt (if (= 0 l-zigzag-width) 0 (round (/ dist-y l-zigzag-width))))
+     (l-zigzag-width (if (= cnt 0) 0 (/ dist-y cnt)))
+     (cnt (if (= 0 r-zigzag-width) 0 (round (/ dist-y r-zigzag-width))))
+     (r-zigzag-width (if (= cnt 0) 0 (/ dist-y cnt)))
 
      ;; store polygon points.
      ;; retrieve list of all inner or outer points
@@ -309,7 +316,7 @@
      (right-edge-stencil empty-stencil)
 
      )  ; let* definitions
-    
+
     ;; set grob properties that can be set from within the stencil callback
     (ly:grob-set-property! grob 'layer layer)
     (ly:grob-set-property! grob 'Y-offset 0)
@@ -1193,10 +1200,10 @@ box = #(make-music 'BoxEvent)
 }
 
 melody = \relative c' {
-  % \override Score.MusicBoxer.broken-bound-padding = 4
+  \override Score.MusicBoxer.broken-bound-padding = 5
   \override Score.MusicBoxer.layer = -10
   \override Score.MusicBoxer.padding = 0.3
-  \override Score.MusicBoxer.border-width = 0.4
+  \override Score.MusicBoxer.border-width = 0.3
   \override Score.MusicBoxer.border-color = ##f
   \override Score.MusicBoxer.color = #(rgb-color 1 0.8 0.8)
 
@@ -1220,6 +1227,8 @@ melody = \relative c' {
 
   g4 f8 e \musicBoxerEnd f4
 
+  \once \override Score.MusicBoxer.caption = "line break"
+  \once \override Score.MusicBoxer.caption-align-bottom = ##t
   \musicBoxerStart
   d4 e f
   \break
@@ -1236,6 +1245,20 @@ melody = \relative c' {
   \once \override Score.MusicBoxer.caption = "motif"
   \musicBoxerStart
   e4 e d
+  \musicBoxerEnd
+  c2.
+  \section
+  \once \override Score.MusicBoxer.r-zigzag-width = 1.0
+  % \once
+  \once \override Score.MusicBoxer.shorten-pair = #'(0 . 0.2)
+  \musicBoxerStart
+  e4
+  \musicBoxerEnd
+  e16 f g e
+  \once \override Score.MusicBoxer.l-zigzag-width = 1.0
+  \once \override Score.MusicBoxer.shorten-pair = #'(0.2 . 0)
+  \musicBoxerStart
+  d4
   \musicBoxerEnd
   c2.
   \section
@@ -1256,6 +1279,10 @@ another = \relative c' {
   \musicBoxerStart c,4-1 e-2 g-3 \musicBoxerEnd c-5
   \once \override Score.MusicBoxer.acknowledge-finger-interface = ##t
   \musicBoxerStart c,4-1 e-2 g-3 \musicBoxerEnd c-5
+  \once \override Score.MusicBoxer.acknowledge-finger-interface = ##t
+  \override Score.MusicBoxer.border-radius = #1
+  
+  \musicBoxerStart c,4-1 e-2 g-3 \musicBoxerEnd c-5
   \box <c-5 g-3 e-2 c-1>1  \f \fermata
   \once \override Score.Box.acknowledge-script-interface = ##t
   \once \override Score.Box.acknowledge-finger-interface = ##t
@@ -1263,7 +1290,7 @@ another = \relative c' {
 }
 
 \score {
-  \new Staff { \melody \another }
+  \new Staff { \melody \break \another }
 }
 
 \layout {
