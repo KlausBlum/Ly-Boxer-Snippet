@@ -32,76 +32,62 @@
      ; add more properties here
      ))
 
-#(define (make-box thick padding filled fill-color open-on-left open-on-right xext yext)
-   (let* ((xext (interval-widen xext padding))
-          (yext (interval-widen yext padding)))
-     (ly:stencil-add
-      (if filled
-          (ly:make-stencil (list 'color fill-color
-                             (list 'round-filled-box
-                               (- (- (car xext) thick)) (+ (cdr xext) thick)
-                               (- (car yext)) (cdr yext)
-                               0.0)
-                             xext yext))
-          empty-stencil)
-      (if (> thick 0)
-          (make-filled-box-stencil
-           (cons (- (car xext) thick) (+ (cdr xext) thick))
-           (cons (- (car yext) thick) (car yext)))
-          empty-stencil)
-      (if (> thick 0)
-          (make-filled-box-stencil
-           (cons (- (car xext) thick) (+ (cdr xext) thick))
-           (cons (cdr yext) (+ (cdr yext) thick)))
-          empty-stencil)
-      (if (and (not open-on-right) (> thick 0))
-          (make-filled-box-stencil
-           (cons (cdr xext) (+ (cdr xext) thick))
-           yext)
-          empty-stencil)
-      (if (and (not open-on-left) (> thick 0))
-          (make-filled-box-stencil
-           (cons (- (car xext) thick) (car xext))
-           yext)
-          empty-stencil)
-      )))
 
 #(define (music-boxer-stencil grob)
-   (let* ((elts (ly:grob-object grob 'elements))
-          (refp-X (ly:grob-common-refpoint-of-array grob elts X))
-          (X-ext (ly:relative-group-extent elts refp-X X))
-          (refp-Y (ly:grob-common-refpoint-of-array grob elts Y))
-          (Y-ext (ly:relative-group-extent elts refp-Y Y))
-          (padding (ly:grob-property grob 'padding 0.3))
-          (thick (ly:grob-property grob 'thickness 0.1))
-          (filled (ly:grob-property grob 'filled #f))
-          (fill-color (ly:grob-property grob 'fill-color grey))
-          (offset (ly:grob-relative-coordinate grob refp-X X))
-          ; (left-bound  (ly:spanner-bound grob LEFT))
-          ; (right-bound (ly:spanner-bound grob RIGHT))
-          ; (break-dir-L (ly:item-break-dir left-bound))
-          ; (break-dir-R (ly:item-break-dir right-bound))
-          ; (open-on-left  (if (=  1 break-dir-L) #t #f))
-          ; (open-on-right (if (= -1 break-dir-R) #t #f))
-          (open-on-left
-           (and (ly:spanner? grob)
-                (= 1 (ly:item-break-dir (ly:spanner-bound grob LEFT)))))
-          ; (open-on-left 
-          ; (if (ly:spanner? grob)
-          ; (if (=  1 (ly:item-break-dir (ly:spanner-bound grob LEFT)))
-          ;    #t #f)
-          ;  #f))
-          (open-on-right
-           (and (ly:spanner? grob)
-                (= -1 (ly:item-break-dir (ly:spanner-bound grob RIGHT)))))
-          ;(open-on-right
-          ;(if (ly:spanner? grob)
-          ;   (if (= -1 (ly:item-break-dir (ly:spanner-bound grob RIGHT)))
-          ;      #t #f)
-          ; #f))
-          (stil (make-box thick padding filled fill-color
-                  open-on-left open-on-right X-ext Y-ext))
-          )
+   (let* (
+           (elts (ly:grob-object grob 'elements))
+           (padding (ly:grob-property grob 'padding 0.3))
+           (refp-X (ly:grob-common-refpoint-of-array grob elts X))
+           (xext (interval-widen (ly:relative-group-extent elts refp-X X) padding))
+           (refp-Y (ly:grob-common-refpoint-of-array grob elts Y))
+           (yext (interval-widen (ly:relative-group-extent elts refp-Y Y) padding))
+           (thick (ly:grob-property grob 'thickness 0.1))
+           (filled (ly:grob-property grob 'filled #f))
+           (fill-color (ly:grob-property grob 'fill-color grey))
+           (offset (ly:grob-relative-coordinate grob refp-X X))
+
+           (open-on-left
+            (and (ly:spanner? grob)
+                 (= 1 (ly:item-break-dir (ly:spanner-bound grob LEFT)))))
+           (open-on-right
+            (and (ly:spanner? grob)
+                 (= -1 (ly:item-break-dir (ly:spanner-bound grob RIGHT)))))
+
+           (stil empty-stencil)
+           )
+     (set! stil
+           (ly:stencil-add
+            (if filled
+                (ly:make-stencil (list 'color fill-color
+                                       (list 'round-filled-box
+                                             (- (- (car xext) thick)) (+ (cdr xext) thick)
+                                             (- (car yext)) (cdr yext)
+                                             0.0)
+                                       xext yext))
+                empty-stencil)
+            (if (> thick 0)
+                (make-filled-box-stencil
+                 (cons (- (car xext) thick) (+ (cdr xext) thick))
+                 (cons (- (car yext) thick) (car yext)))
+                empty-stencil)
+            (if (> thick 0)
+                (make-filled-box-stencil
+                 (cons (- (car xext) thick) (+ (cdr xext) thick))
+                 (cons (cdr yext) (+ (cdr yext) thick)))
+                empty-stencil)
+            (if (and (not open-on-right) (> thick 0))
+                (make-filled-box-stencil
+                 (cons (cdr xext) (+ (cdr xext) thick))
+                 yext)
+                empty-stencil)
+            (if (and (not open-on-left) (> thick 0))
+                (make-filled-box-stencil
+                 (cons (- (car xext) thick) (car xext))
+                 yext)
+                empty-stencil)
+            ) ; ly:stencil-add ...
+           
+           ) ; end of "set! stil ..."
      (ly:stencil-translate-axis stil (- offset) X)
      )
    )
@@ -144,27 +130,27 @@
   music-boxer-types
   (map (lambda (x)
          (set-object-property! (car x)
-           'music-description
-           (cdr (assq 'description (cdr x))))
+                               'music-description
+                               (cdr (assq 'description (cdr x))))
          (let ((lst (cdr x)))
            (set! lst (assoc-set! lst 'name (car x)))
            (set! lst (assq-remove! lst 'description))
            (hashq-set! music-name-to-property-table (car x) lst)
            (cons (car x) lst)))
-    music-boxer-types))
+       music-boxer-types))
 
 #(set!
   box-types
   (map (lambda (x)
          (set-object-property! (car x)
-           'music-description
-           (cdr (assq 'description (cdr x))))
+                               'music-description
+                               (cdr (assq 'description (cdr x))))
          (let ((lst (cdr x)))
            (set! lst (assoc-set! lst 'name (car x)))
            (set! lst (assq-remove! lst 'description))
            (hashq-set! music-name-to-property-table (car x) lst)
            (cons (car x) lst)))
-    box-types))
+       box-types))
 
 #(set! music-descriptions
        (append music-boxer-types music-descriptions))
@@ -192,100 +178,100 @@ musicBoxerEngraver =
 
      `((listeners
         (music-boxer-event .
-          ,(lambda (engraver event)
-             (if (= START (ly:event-property event 'span-direction))
-                 (set! event-start event)
-                 (set! event-stop event)))))
+                           ,(lambda (engraver event)
+                              (if (= START (ly:event-property event 'span-direction))
+                                  (set! event-start event)
+                                  (set! event-stop event)))))
 
        (acknowledgers
         (note-column-interface .
-          ,(lambda (engraver grob source-engraver)
-             (if (ly:spanner? span)
-                 (begin
-                  (ly:pointer-group-interface::add-grob span 'elements grob)
-                  (add-bound-item span grob)))
-             (if (ly:spanner? finished)
-                 (begin
-                  (ly:pointer-group-interface::add-grob finished 'elements grob)
-                  (add-bound-item finished grob)))))
+                               ,(lambda (engraver grob source-engraver)
+                                  (if (ly:spanner? span)
+                                      (begin
+                                       (ly:pointer-group-interface::add-grob span 'elements grob)
+                                       (add-bound-item span grob)))
+                                  (if (ly:spanner? finished)
+                                      (begin
+                                       (ly:pointer-group-interface::add-grob finished 'elements grob)
+                                       (add-bound-item finished grob)))))
 
         (inline-accidental-interface .
-          ,(lambda (engraver grob source-engraver)
-             (if (ly:spanner? span)
-                 (begin
-                  (ly:pointer-group-interface::add-grob span 'elements grob)))
-             (if (ly:spanner? finished)
-                 (ly:pointer-group-interface::add-grob finished 'elements grob))))
+                                     ,(lambda (engraver grob source-engraver)
+                                        (if (ly:spanner? span)
+                                            (begin
+                                             (ly:pointer-group-interface::add-grob span 'elements grob)))
+                                        (if (ly:spanner? finished)
+                                            (ly:pointer-group-interface::add-grob finished 'elements grob))))
 
         (dots-interface .
-          ,(lambda (engraver grob source-engraver)
-             (if (ly:spanner? span)
-                 (begin
-                  (ly:pointer-group-interface::add-grob span 'elements grob)))
-             (if (ly:spanner? finished)
-                 (ly:pointer-group-interface::add-grob finished 'elements grob))))
+                        ,(lambda (engraver grob source-engraver)
+                           (if (ly:spanner? span)
+                               (begin
+                                (ly:pointer-group-interface::add-grob span 'elements grob)))
+                           (if (ly:spanner? finished)
+                               (ly:pointer-group-interface::add-grob finished 'elements grob))))
 
         (ledger-line-spanner-interface .
-          ,(lambda (engraver grob source-engraver)
-             (if (ly:spanner? span)
-                 (begin
-                  (ly:pointer-group-interface::add-grob span 'elements grob)))
-             (if (ly:spanner? finished)
-                 (ly:pointer-group-interface::add-grob finished 'elements grob))))
+                                       ,(lambda (engraver grob source-engraver)
+                                          (if (ly:spanner? span)
+                                              (begin
+                                               (ly:pointer-group-interface::add-grob span 'elements grob)))
+                                          (if (ly:spanner? finished)
+                                              (ly:pointer-group-interface::add-grob finished 'elements grob))))
 
         (script-interface .
-          ,(lambda (engraver grob source-engraver)
-             (if (and (ly:spanner? span)
-                      (eq? #t (ly:grob-property span 'acknowledge-script-interface)))
-                 (begin
-                  (ly:pointer-group-interface::add-grob span 'elements grob)))
-             (if (and (ly:spanner? finished)
-                      (eq? #t (ly:grob-property finished 'acknowledge-script-interface)))
-                 (ly:pointer-group-interface::add-grob finished 'elements grob))))
+                          ,(lambda (engraver grob source-engraver)
+                             (if (and (ly:spanner? span)
+                                      (eq? #t (ly:grob-property span 'acknowledge-script-interface)))
+                                 (begin
+                                  (ly:pointer-group-interface::add-grob span 'elements grob)))
+                             (if (and (ly:spanner? finished)
+                                      (eq? #t (ly:grob-property finished 'acknowledge-script-interface)))
+                                 (ly:pointer-group-interface::add-grob finished 'elements grob))))
 
         (finger-interface .
-          ,(lambda (engraver grob source-engraver)
-             (if (and (ly:spanner? span)
-                      (eq? #t (ly:grob-property span 'acknowledge-finger-interface)))
-                 (begin
-                  (ly:pointer-group-interface::add-grob span 'elements grob)))
-             (if (and (ly:spanner? finished)
-                      (eq? #t (ly:grob-property finished 'acknowledge-finger-interface)))
-                 (ly:pointer-group-interface::add-grob finished 'elements grob))))
+                          ,(lambda (engraver grob source-engraver)
+                             (if (and (ly:spanner? span)
+                                      (eq? #t (ly:grob-property span 'acknowledge-finger-interface)))
+                                 (begin
+                                  (ly:pointer-group-interface::add-grob span 'elements grob)))
+                             (if (and (ly:spanner? finished)
+                                      (eq? #t (ly:grob-property finished 'acknowledge-finger-interface)))
+                                 (ly:pointer-group-interface::add-grob finished 'elements grob))))
 
         ;; add additional interfaces to acknowledge here
 
         )
 
        (process-music .
-         ,(lambda (trans)
-            (if (ly:stream-event? event-stop)
-                (if (null? span)
-                    (ly:warning "No start to this box.")
-                    (begin
-                     (set! finished span)
-                     (ly:engraver-announce-end-grob trans finished event-start)
-                     (set! span '())
-                     (set! event-stop '()))))
-            (if (ly:stream-event? event-start)
-                (begin
-                 (set! span (ly:engraver-make-grob trans 'MusicBoxer event-start))
-                 (set! event-start '())))))
+                      ,(lambda (trans)
+                         (if (ly:stream-event? event-stop)
+                             (if (null? span)
+                                 (ly:warning "No start to this box.")
+                                 (begin
+                                  (set! finished span)
+                                  (ly:engraver-announce-end-grob trans finished event-start)
+                                  (set! span '())
+                                  (set! event-stop '()))))
+                         (if (ly:stream-event? event-start)
+                             (begin
+                              (set! span (ly:engraver-make-grob trans 'MusicBoxer event-start))
+                              (set! event-start '())))))
 
        (stop-translation-timestep .
-         ,(lambda (trans)
-            (if (and (ly:spanner? span)
-                     (null? (ly:spanner-bound span LEFT)))
-                (ly:spanner-set-bound! span LEFT
-                  (ly:context-property context 'currentMusicalColumn)))
-            (if (ly:spanner? finished)
-                (begin
-                 (if (null? (ly:spanner-bound finished RIGHT))
-                     (ly:spanner-set-bound! finished RIGHT
-                       (ly:context-property context 'currentMusicalColumn)))
-                 (set! finished '())
-                 (set! event-start '())
-                 (set! event-stop '())))))
+                                  ,(lambda (trans)
+                                     (if (and (ly:spanner? span)
+                                              (null? (ly:spanner-bound span LEFT)))
+                                         (ly:spanner-set-bound! span LEFT
+                                                                (ly:context-property context 'currentMusicalColumn)))
+                                     (if (ly:spanner? finished)
+                                         (begin
+                                          (if (null? (ly:spanner-bound finished RIGHT))
+                                              (ly:spanner-set-bound! finished RIGHT
+                                                                     (ly:context-property context 'currentMusicalColumn)))
+                                          (set! finished '())
+                                          (set! event-start '())
+                                          (set! event-stop '())))))
 
        (finalize
         (lambda (trans)
@@ -310,56 +296,56 @@ boxEngraver =
 
      `((listeners
         (box-event .
-          ,(lambda (engraver event)
-             (set! ev event))))
+                   ,(lambda (engraver event)
+                      (set! ev event))))
 
        (acknowledgers
         (note-column-interface .
-          ,(lambda (engraver grob source-engraver)
-             (if (ly:grob? box)
-                 (begin
-                  ; (set! (ly:grob-parent box X) grob) ;; ??
-                  (set! (ly:grob-parent box Y) grob)
-                  (ly:pointer-group-interface::add-grob box 'elements grob)))))
+                               ,(lambda (engraver grob source-engraver)
+                                  (if (ly:grob? box)
+                                      (begin
+                                       ; (set! (ly:grob-parent box X) grob) ;; ??
+                                       (set! (ly:grob-parent box Y) grob)
+                                       (ly:pointer-group-interface::add-grob box 'elements grob)))))
 
         (inline-accidental-interface .
-          ,(lambda (engraver grob source-engraver)
-             (if (ly:item? box)
-                 (ly:pointer-group-interface::add-grob box 'elements grob))))
+                                     ,(lambda (engraver grob source-engraver)
+                                        (if (ly:item? box)
+                                            (ly:pointer-group-interface::add-grob box 'elements grob))))
 
         (dots-interface .
-          ,(lambda (engraver grob source-engraver)
-             (if (ly:item? box)
-                 (ly:pointer-group-interface::add-grob box 'elements grob))))
+                        ,(lambda (engraver grob source-engraver)
+                           (if (ly:item? box)
+                               (ly:pointer-group-interface::add-grob box 'elements grob))))
 
         (ledger-line-spanner-interface .
-          ,(lambda (engraver grob source-engraver)
-             (if (ly:item? box)
-                 (ly:pointer-group-interface::add-grob box 'elements grob))))
+                                       ,(lambda (engraver grob source-engraver)
+                                          (if (ly:item? box)
+                                              (ly:pointer-group-interface::add-grob box 'elements grob))))
 
         (script-interface .
-          ,(lambda (engraver grob source-engraver)
-             (if (and (ly:item? box) (eq? #t (ly:grob-property box 'acknowledge-script-interface)))
-                 (ly:pointer-group-interface::add-grob box 'elements grob))))
+                          ,(lambda (engraver grob source-engraver)
+                             (if (and (ly:item? box) (eq? #t (ly:grob-property box 'acknowledge-script-interface)))
+                                 (ly:pointer-group-interface::add-grob box 'elements grob))))
 
         (finger-interface .
-          ,(lambda (engraver grob source-engraver)
-             (if (and (ly:item? box) (eq? #t (ly:grob-property box 'acknowledge-finger-interface)))
-                 (ly:pointer-group-interface::add-grob box 'elements grob))))
+                          ,(lambda (engraver grob source-engraver)
+                             (if (and (ly:item? box) (eq? #t (ly:grob-property box 'acknowledge-finger-interface)))
+                                 (ly:pointer-group-interface::add-grob box 'elements grob))))
 
         ;; add additional interfaces to acknowledge here
 
         )
 
        (process-music .
-         ,(lambda (trans)
-            (if (ly:stream-event? ev)
-                (begin
-                 (set! box (ly:engraver-make-grob trans 'Box ev))
-                 (set! ev '())))))
+                      ,(lambda (trans)
+                         (if (ly:stream-event? ev)
+                             (begin
+                              (set! box (ly:engraver-make-grob trans 'Box ev))
+                              (set! ev '())))))
        (stop-translation-timestep .
-         ,(lambda (trans)
-            (set! box '()))))))
+                                  ,(lambda (trans)
+                                     (set! box '()))))))
 
 musicBoxerStart =
 #(make-span-event 'MusicBoxerEvent START)
