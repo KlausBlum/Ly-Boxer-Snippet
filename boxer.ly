@@ -1,5 +1,97 @@
 \version "2.24.3"
 
+% Necessary predicates
+#(define (color-or-false? obj)
+   (or (color? obj) (eq? obj #f)))
+
+#(define (hide-target? obj)
+   (if (member
+        obj
+        #'("none"
+            "staff"
+            "music"
+            "all"))
+       #t
+       #f))
+
+#(define (caption? obj)
+   (or (string? obj)
+       (markup? obj)
+       (eq? obj #f)))
+
+
+% some helper functions:
+
+#(define-markup-command (on-box layout props radius color arg) (number? scheme? markup?)
+   (let* ((stencil (interpret-markup layout props arg))
+          (X-ext (ly:stencil-extent stencil X))
+          (Y-ext (ly:stencil-extent stencil Y)))
+     (if (color? color)
+         (ly:stencil-add (ly:make-stencil
+                          (list 'color color
+                                (ly:stencil-expr (ly:round-filled-box X-ext Y-ext radius))
+                                X-ext Y-ext)) stencil)
+         stencil)
+     )
+   )
+
+#(define (rotate-point point-to-add rotation x-center y-center)
+   "Rotate the given point (point-to-add) around (x-center, y-center) by
+     the given rotation angle (in degrees)."
+   (let*
+    (
+      (x-to-add (car point-to-add))
+      (y-to-add (cdr point-to-add))
+      ; convert (x-to-add | y-to-add) to polar coordinates (distance ; direction):
+      (x-diff (- x-to-add x-center))
+      (y-diff (- y-to-add y-center))
+      (distance (sqrt (+ (expt x-diff 2) (expt y-diff 2))))
+      (direction
+       (if (eq? 0 x-diff)
+           ;(then...)
+           (if (> y-diff 0) 90 -90)
+           ;(else...)
+           (+ (atan (/ y-diff x-diff)) (if (< x-diff 0) 3.141592653589 0))
+           )
+       )
+      ; apply rotation:
+      (new-direction (+ direction (* rotation (/ 3.14159265 180))))
+      (new-x (+ x-center (* distance (cos new-direction))))
+      (new-y (+ y-center (* distance (sin new-direction))))
+      )
+    ; return rotated point as pair of coordinates:
+    (cons new-x new-y)
+    )
+   )
+
+#(define (expand-range range point-to-add)
+   "Expand the borders of the given range until it contains the added point.
+    Return the expanded range."
+   (let*
+    ; split pair of pairs into separate variables for better usability:
+    (
+      (x-lo (car (car range)))
+      (x-hi (cdr (car range)))
+      (y-lo (car (cdr range)))
+      (y-hi (cdr (cdr range)))
+      (x-to-add (car point-to-add))
+      (y-to-add (cdr point-to-add))
+      )
+    ; initial values are #f. Replace them, if present:
+    (if (eq? #f x-lo) (set! x-lo x-to-add))
+    (if (eq? #f x-hi) (set! x-hi x-to-add))
+    (if (eq? #f y-lo) (set! y-lo y-to-add))
+    (if (eq? #f y-hi) (set! y-hi y-to-add))
+    ; now expand borders:
+    (if (< x-to-add x-lo) (set! x-lo x-to-add))
+    (if (> x-to-add x-hi) (set! x-hi x-to-add))
+    (if (< y-to-add y-lo) (set! y-lo y-to-add))
+    (if (> y-to-add y-hi) (set! y-hi y-to-add))
+    ; return expanded range as pair of pairs:
+    (cons (cons x-lo x-hi) (cons y-lo y-hi))
+    )
+   )
+
 
 
 #(define-event-class 'music-boxer-event 'span-event)
@@ -86,7 +178,7 @@
                  yext)
                 empty-stencil)
             ) ; ly:stencil-add ...
-           
+
            ) ; end of "set! stil ..."
      (ly:stencil-translate-axis stil (- offset) X)
      )
