@@ -117,28 +117,79 @@
     (apply define-grob-property x))
 
   `(
-     ; (filled ,boolean? "Should we fill in this box?")
-     (color ,color? "Background color for filling the rectangle")
-     (border-color ,color? "Border color for the rectangle")
      (acknowledge-finger-interface ,boolean? "Include fingerings in box?")
      (acknowledge-script-interface ,boolean? "Include scripts in box?")
      ; add more properties here
+     (color ,color-or-false? "Background color for filling the rectangle")
+     (border-color ,color-or-false? "Border color for the rectangle")
+     (border-width ,number? "Width / thickness of the border rectangle")
+     (broken-bound-padding ,number? "Amount of protrusion into the margin when split by a line break")
+     (border-radius ,number? "")
+     (shorten-pair ,number-pair? "")
+     (l-zigzag-width ,number? "")
+     (r-zigzag-width ,number? "")
+     (open-on-bottom ,boolean? "")
+     (open-on-top ,boolean? "")
+     ; (hide ,hide-target? "")   ; TODO?
+     (angle ,number? "")
+     (caption ,caption? "")
+     (caption-padding ,number? "")
+     (caption-radius ,number? "")
+     (caption-align-bottom ,boolean? "")
+     (caption-halign ,number? "")  ; from -1=left to 1=right
+     (caption-color ,color-or-false? "")  ; ##f will use border-color
+     (caption-keep-y ,boolean? "")
+     (caption-translate-x ,number? "")
+     (set-top-edge ,boolean? "")
+     (set-bottom-edge ,boolean? "")
+     (set-left-edge ,boolean? "")
+     (set-right-edge ,boolean? "")
+     (set-caption-extent ,boolean? "")
      ))
 
 
 #(define (music-boxer-stencil grob)
    (let* (
            (elts (ly:grob-object grob 'elements))
-           (padding (ly:grob-property grob 'padding 0.3))
            (refp-X (ly:grob-common-refpoint-of-array grob elts X))
-           (xext (interval-widen (ly:relative-group-extent elts refp-X X) padding))
            (refp-Y (ly:grob-common-refpoint-of-array grob elts Y))
-           (yext (interval-widen (ly:relative-group-extent elts refp-Y Y) padding))
-           (thick (ly:grob-property grob 'thickness 0.1))
-           ; (filled (ly:grob-property grob 'filled #f))
-           (color (ly:grob-property grob 'color grey))
-           (border-color (ly:grob-property grob 'border-color grey))
            (offset (ly:grob-relative-coordinate grob refp-X X))
+
+           (padding (ly:grob-property grob 'padding 0.3))
+           (xext (interval-widen (ly:relative-group-extent elts refp-X X) padding))
+           (yext (interval-widen (ly:relative-group-extent elts refp-Y Y) padding))
+           (border-width (ly:grob-property grob 'border-width 0.25))
+           (color (ly:grob-property grob 'color (rgb-color 0.8  0.8  1.0)))
+           (border-color (ly:grob-property grob 'border-color (rgb-color 0.3  0.3  0.9)))
+           (broken-bound-padding (ly:grob-property grob 'broken-bound-padding 4))
+           (border-radius (ly:grob-property grob 'border-radius 0))
+           (shorten-pair (ly:grob-property grob 'shorten-pair (cons 0 0)))
+           (y-lower (car yext))
+           (y-upper (cdr yext))
+           (l-zigzag-width (ly:grob-property grob 'l-zigzag-width 0))
+           (r-zigzag-width (ly:grob-property grob 'r-zigzag-width 0))
+           (open-on-bottom (ly:grob-property grob 'open-on-bottom #f))
+           (open-on-top    (ly:grob-property grob 'open-on-top #f))
+           ; (hide (ly:grob-property grob 'hide "none"))   ; TODO?
+           (angle (ly:grob-property grob 'angle 0))
+           (caption (ly:grob-property grob 'caption #f))
+           (caption-padding (ly:grob-property grob 'caption-padding 0.25))
+           (caption-radius (ly:grob-property grob 'caption-radius 0.25))
+           (caption-align-bottom (ly:grob-property grob 'caption-align-bottom #f))
+           (caption-halign (ly:grob-property grob 'caption-halign -1))  ; from -1=left to 1=right
+           (caption-color (ly:grob-property grob 'caption-color #f)) ; ##f will use border-color
+           (caption-keep-y (ly:grob-property grob 'caption-keep-y #f))
+           (caption-translate-x (ly:grob-property grob 'caption-translate-x 0))
+           (set-top-edge (ly:grob-property grob 'set-top-edge #f))
+           (set-bottom-edge (ly:grob-property grob 'set-bottom-edge #f))
+           (set-left-edge (ly:grob-property grob 'set-left-edge #f))
+           (set-right-edge (ly:grob-property grob 'set-right-edge #f))
+           (set-caption-extent (ly:grob-property grob 'set-caption-extent #f))
+
+           (y-l-lower (if (number? y-lower) y-lower (car y-lower)))
+           (y-r-lower (if (number? y-lower) y-lower (cdr y-lower)))
+           (y-l-upper (if (number? y-upper) y-upper (car y-upper)))
+           (y-r-upper (if (number? y-upper) y-upper (cdr y-upper)))
 
            (open-on-left
             (and (ly:spanner? grob)
@@ -148,45 +199,46 @@
                  (= -1 (ly:item-break-dir (ly:spanner-bound grob RIGHT)))))
 
            (stil empty-stencil)
-           )
+           )  ; let* definitions
+
      (set! stil
            (ly:stencil-add
             (if (color? color)
                 (ly:make-stencil (list 'color color
                                        (list 'round-filled-box
-                                             (- (- (car xext) thick)) (+ (cdr xext) thick)
+                                             (- (- (car xext) border-width)) (+ (cdr xext) border-width)
                                              (- (car yext)) (cdr yext)
                                              0.0)
                                        xext yext))
                 empty-stencil)
-            (if (and (> thick 0) (color? border-color))  ; only add stencil if set to a valid color (could also be set to ##f)
+            (if (and (> border-width 0) (color? border-color))  ; only add stencil if set to a valid color (could also be set to ##f)
                 (stencil-with-color
                  (ly:round-filled-box
-                  (cons (- (car xext) thick) (+ (cdr xext) thick))
-                  (cons (- (car yext) thick) (car yext))
+                  (cons (- (car xext) border-width) (+ (cdr xext) border-width))
+                  (cons (- (car yext) border-width) (car yext))
                   0)
                  border-color)
                 empty-stencil)
-            (if (and (> thick 0) (color? border-color))  ; only add stencil if set to a valid color (could also be set to ##f)
+            (if (and (> border-width 0) (color? border-color))  ; only add stencil if set to a valid color (could also be set to ##f)
                 (stencil-with-color
                  (ly:round-filled-box
-                  (cons (- (car xext) thick) (+ (cdr xext) thick))
-                  (cons (cdr yext) (+ (cdr yext) thick))
+                  (cons (- (car xext) border-width) (+ (cdr xext) border-width))
+                  (cons (cdr yext) (+ (cdr yext) border-width))
                   0)
                  border-color)
                 empty-stencil)
-            (if (and (not open-on-right) (> thick 0) (color? border-color))  ; only add stencil if set to a valid color (could also be set to ##f)
+            (if (and (not open-on-right) (> border-width 0) (color? border-color))  ; only add stencil if set to a valid color (could also be set to ##f)
                 (stencil-with-color
                  (ly:round-filled-box
-                  (cons (cdr xext) (+ (cdr xext) thick))
+                  (cons (cdr xext) (+ (cdr xext) border-width))
                   yext
                   0)
                  border-color)
                 empty-stencil)
-            (if (and (not open-on-left) (> thick 0) (color? border-color))  ; only add stencil if set to a valid color (could also be set to ##f)
+            (if (and (not open-on-left) (> border-width 0) (color? border-color))  ; only add stencil if set to a valid color (could also be set to ##f)
                 (stencil-with-color
                  (ly:round-filled-box
-                  (cons (- (car xext) thick) (car xext))
+                  (cons (- (car xext) border-width) (car xext))
                   yext
                   0)
                  border-color)
@@ -471,7 +523,7 @@ box = #(make-music 'BoxEvent)
 melody = \relative c' {
   \override Score.MusicBoxer.layer = -10
   \override Score.MusicBoxer.filled = ##t
-  \override Score.MusicBoxer.thickness = 0.5
+  \override Score.MusicBoxer.border-width = 0.5
   \override Score.MusicBoxer.border-color = ##f
   \override Score.MusicBoxer.color = #(rgb-color 1 0.8 0.8)
 
@@ -481,7 +533,7 @@ melody = \relative c' {
   e4 e d
   \musicBoxerEnd
   c2.
-  
+
   \override Score.MusicBoxer.border-color = #red
   \override Score.MusicBoxer.color = ##f
   \musicBoxerStart
@@ -517,7 +569,7 @@ another = \relative c' {
   \set fingeringOrientations = #'(left)
   \override Score.Box.layer = -10
   \override Score.Box.filled = ##t
-  \override Score.Box.thickness = 0.5
+  \override Score.Box.border-width = 0.5
   \override Score.Box.border-color = #(rgb-color 0.0 0.9 0.0)
   \override Score.Box.color = #(rgb-color 0.9 1 0.8)
 
