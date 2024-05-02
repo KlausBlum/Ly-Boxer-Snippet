@@ -1,10 +1,6 @@
-% \version "2.19.15"
 \version "2.24.3"
 
 
-\header {
-  tagline = ##f
-}
 
 #(define-event-class 'music-boxer-event 'span-event)
 
@@ -374,6 +370,11 @@ musicBoxerEnd =
 box = #(make-music 'BoxEvent)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EXAMPLE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\header {
+  tagline = ##f
+}
 
 melody = \relative c' {
   \override Score.MusicBoxer.layer = -10
