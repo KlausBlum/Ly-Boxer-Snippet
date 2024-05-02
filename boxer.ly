@@ -117,8 +117,9 @@
     (apply define-grob-property x))
 
   `(
-     (filled ,boolean? "Should we fill in this box?")
-     (fill-color ,color? "Background color for filling the rectangle")
+     ; (filled ,boolean? "Should we fill in this box?")
+     (color ,color? "Background color for filling the rectangle")
+     (border-color ,color? "Border color for the rectangle")
      (acknowledge-finger-interface ,boolean? "Include fingerings in box?")
      (acknowledge-script-interface ,boolean? "Include scripts in box?")
      ; add more properties here
@@ -134,8 +135,9 @@
            (refp-Y (ly:grob-common-refpoint-of-array grob elts Y))
            (yext (interval-widen (ly:relative-group-extent elts refp-Y Y) padding))
            (thick (ly:grob-property grob 'thickness 0.1))
-           (filled (ly:grob-property grob 'filled #f))
-           (fill-color (ly:grob-property grob 'fill-color grey))
+           ; (filled (ly:grob-property grob 'filled #f))
+           (color (ly:grob-property grob 'color grey))
+           (border-color (ly:grob-property grob 'border-color grey))
            (offset (ly:grob-relative-coordinate grob refp-X X))
 
            (open-on-left
@@ -149,35 +151,47 @@
            )
      (set! stil
            (ly:stencil-add
-            (if filled
-                (ly:make-stencil (list 'color fill-color
+            (if (color? color)
+                (ly:make-stencil (list 'color color
                                        (list 'round-filled-box
                                              (- (- (car xext) thick)) (+ (cdr xext) thick)
                                              (- (car yext)) (cdr yext)
                                              0.0)
                                        xext yext))
                 empty-stencil)
-            (if (> thick 0)
-                (make-filled-box-stencil
-                 (cons (- (car xext) thick) (+ (cdr xext) thick))
-                 (cons (- (car yext) thick) (car yext)))
+            (if (and (> thick 0) (color? border-color))  ; only add stencil if set to a valid color (could also be set to ##f)
+                (stencil-with-color
+                 (ly:round-filled-box
+                  (cons (- (car xext) thick) (+ (cdr xext) thick))
+                  (cons (- (car yext) thick) (car yext))
+                  0)
+                 border-color)
                 empty-stencil)
-            (if (> thick 0)
-                (make-filled-box-stencil
-                 (cons (- (car xext) thick) (+ (cdr xext) thick))
-                 (cons (cdr yext) (+ (cdr yext) thick)))
+            (if (and (> thick 0) (color? border-color))  ; only add stencil if set to a valid color (could also be set to ##f)
+                (stencil-with-color
+                 (ly:round-filled-box
+                  (cons (- (car xext) thick) (+ (cdr xext) thick))
+                  (cons (cdr yext) (+ (cdr yext) thick))
+                  0)
+                 border-color)
                 empty-stencil)
-            (if (and (not open-on-right) (> thick 0))
-                (make-filled-box-stencil
-                 (cons (cdr xext) (+ (cdr xext) thick))
-                 yext)
+            (if (and (not open-on-right) (> thick 0) (color? border-color))  ; only add stencil if set to a valid color (could also be set to ##f)
+                (stencil-with-color
+                 (ly:round-filled-box
+                  (cons (cdr xext) (+ (cdr xext) thick))
+                  yext
+                  0)
+                 border-color)
                 empty-stencil)
-            (if (and (not open-on-left) (> thick 0))
-                (make-filled-box-stencil
-                 (cons (- (car xext) thick) (car xext))
-                 yext)
+            (if (and (not open-on-left) (> thick 0) (color? border-color))  ; only add stencil if set to a valid color (could also be set to ##f)
+                (stencil-with-color
+                 (ly:round-filled-box
+                  (cons (- (car xext) thick) (car xext))
+                  yext
+                  0)
+                 border-color)
                 empty-stencil)
-            ) ; ly:stencil-add ...
+            ); ly:stencil-add ...
 
            ) ; end of "set! stil ..."
      (ly:stencil-translate-axis stil (- offset) X)
@@ -458,8 +472,8 @@ melody = \relative c' {
   \override Score.MusicBoxer.layer = -10
   \override Score.MusicBoxer.filled = ##t
   \override Score.MusicBoxer.thickness = 0.5
-  \override Score.MusicBoxer.color = #red
-  \override Score.MusicBoxer.fill-color = #(rgb-color 1 0.8 0.8)
+  \override Score.MusicBoxer.border-color = ##f
+  \override Score.MusicBoxer.color = #(rgb-color 1 0.8 0.8)
 
   \time 3/4
 
@@ -467,12 +481,15 @@ melody = \relative c' {
   e4 e d
   \musicBoxerEnd
   c2.
+  
+  \override Score.MusicBoxer.border-color = #red
+  \override Score.MusicBoxer.color = ##f
   \musicBoxerStart
   e4 e d
   \musicBoxerEnd
   c2.
-  \override Score.MusicBoxer.color = #blue
-  \override Score.MusicBoxer.fill-color = #(rgb-color 0.8 0.8 1)
+  \override Score.MusicBoxer.border-color = #blue
+  \override Score.MusicBoxer.color = #(rgb-color 0.8 0.8 1)
   \musicBoxerStart
   e4 f g
 
@@ -482,14 +499,14 @@ melody = \relative c' {
   d4 e f
   \break
   f4 e8 d \musicBoxerEnd e4
-  \override Score.MusicBoxer.color = #(rgb-color 1 0.4 0.0)
-  \override Score.MusicBoxer.fill-color = #(rgb-color 1 0.9 0.8)
+  \override Score.MusicBoxer.border-color = #(rgb-color 1 0.4 0.0)
+  \override Score.MusicBoxer.color = #(rgb-color 1 0.9 0.8)
   \musicBoxerStart
   e4 e f
   \musicBoxerEnd
   g2.
-  \override Score.MusicBoxer.color = #red
-  \override Score.MusicBoxer.fill-color = #(rgb-color 1 0.8 0.8)
+  \override Score.MusicBoxer.border-color = #red
+  \override Score.MusicBoxer.color = #(rgb-color 1 0.8 0.8)
   \musicBoxerStart
   e4 e d
   \musicBoxerEnd
@@ -501,8 +518,8 @@ another = \relative c' {
   \override Score.Box.layer = -10
   \override Score.Box.filled = ##t
   \override Score.Box.thickness = 0.5
-  \override Score.Box.color = #(rgb-color 0.0 0.9 0.0)
-  \override Score.Box.fill-color = #(rgb-color 0.9 1 0.8)
+  \override Score.Box.border-color = #(rgb-color 0.0 0.9 0.0)
+  \override Score.Box.color = #(rgb-color 0.9 1 0.8)
 
   \time 4/4
   \musicBoxerStart c4\f e g \musicBoxerEnd c
