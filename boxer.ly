@@ -4,6 +4,9 @@
 #(define (color-or-false? obj)
    (or (color? obj) (eq? obj #f)))
 
+% #(define (number-or-pair? obj)
+%    (or (number-pair? obj) (number? obj)))
+
 #(define (hide-target? obj)
    (if (member
         obj
@@ -126,6 +129,8 @@
      (broken-bound-padding ,number? "Amount of protrusion into the margin when split by a line break")
      (border-radius ,number? "")
      (shorten-pair ,number-pair? "")
+     (y-upper ,number-or-pair? "")
+     (y-lower ,number-or-pair? "")
      (l-zigzag-width ,number? "")
      (r-zigzag-width ,number? "")
      (open-on-bottom ,boolean? "")
@@ -158,6 +163,8 @@
 
      (padding (ly:grob-property grob 'padding 0.3))
      (shorten-pair (ly:grob-property grob 'shorten-pair (cons 0 0)))
+     (y-upper (ly:grob-property grob 'y-upper 0))
+     (y-lower (ly:grob-property grob 'y-lower 0))
      (frame-X-extent (interval-widen (ly:relative-group-extent elts refp-X X) padding))
      (frame-X-extent (cons (+ (car frame-X-extent) (car shorten-pair)) (- (cdr frame-X-extent) (cdr shorten-pair))) )
      (border-width (ly:grob-property grob 'border-width 0.25))
@@ -1280,13 +1287,35 @@ another = \relative c' {
   \once \override Score.MusicBoxer.acknowledge-finger-interface = ##t
   \musicBoxerStart c,4-1 e-2 g-3 \musicBoxerEnd c-5
   \once \override Score.MusicBoxer.acknowledge-finger-interface = ##t
-  \override Score.MusicBoxer.border-radius = #1
+  \once \override Score.MusicBoxer.border-radius = #1
   
   \musicBoxerStart c,4-1 e-2 g-3 \musicBoxerEnd c-5
   \box <c-5 g-3 e-2 c-1>1  \f \fermata
   \once \override Score.Box.acknowledge-script-interface = ##t
   \once \override Score.Box.acknowledge-finger-interface = ##t
   \box <c-5 g-3 e-2 c-1>1  \f \fermata
+  
+  \break
+  
+  \time 3/4
+  \override Score.MusicBoxer.border-color = #(rgb-color 1 0.4 0.0)
+  \override Score.MusicBoxer.color = #(rgb-color 1 0.9 0.8)
+  \once \override Score.MusicBoxer.caption = "up:"
+  \override Score.MusicBoxer.y-upper = #'(-1 . 0)
+  \override Score.MusicBoxer.y-lower = #'(0  . 1)
+  \musicBoxerStart
+  e,4^\markup \column { " "    "manually moving corners to indicate melody direction:"    " "     " " }
+  e f
+  \musicBoxerEnd
+  g2.
+  \override Score.MusicBoxer.border-color = #red
+  \override Score.MusicBoxer.color = #(rgb-color 1 0.8 0.8)
+  \once \override Score.MusicBoxer.caption = "down:"
+  \musicBoxerStart
+  e4 e d
+  \musicBoxerEnd
+  c2.
+  R2.*3
 }
 
 \score {
