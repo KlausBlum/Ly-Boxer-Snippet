@@ -174,8 +174,8 @@
      (border-color (ly:grob-property grob 'border-color (rgb-color 0.3  0.3  0.9)))
      (bb-pad (ly:grob-property grob 'broken-bound-padding 4))
      (border-radius (ly:grob-property grob 'border-radius 0))
-     (y-lower (car yext))
-     (y-upper (cdr yext))
+     ; (y-lower (car yext))
+     ; (y-upper (cdr yext))
      (l-zigzag-width (ly:grob-property grob 'l-zigzag-width 0))
      (r-zigzag-width (ly:grob-property grob 'r-zigzag-width 0))
      (open-on-bottom (ly:grob-property grob 'open-on-bottom #f))
@@ -196,10 +196,10 @@
      (set-left-edge (ly:grob-property grob 'set-left-edge #f))
      (set-right-edge (ly:grob-property grob 'set-right-edge #f))
      (set-caption-extent (ly:grob-property grob 'set-caption-extent #f))
-     (y-l-lower (if (number? y-lower) y-lower (car y-lower)))
-     (y-r-lower (if (number? y-lower) y-lower (cdr y-lower)))
-     (y-l-upper (if (number? y-upper) y-upper (car y-upper)))
-     (y-r-upper (if (number? y-upper) y-upper (cdr y-upper)))
+     (y-l-lower (+ (car yext) (if (number? y-lower) y-lower (car y-lower))))
+     (y-r-lower (+ (car yext) (if (number? y-lower) y-lower (cdr y-lower))))
+     (y-l-upper (+ (cdr yext) (if (number? y-upper) y-upper (car y-upper))))
+     (y-r-upper (+ (cdr yext) (if (number? y-upper) y-upper (cdr y-upper))))
      (open-on-left
       (and (ly:spanner? grob)
            (= 1 (ly:item-break-dir (ly:spanner-bound grob LEFT)))))
@@ -229,9 +229,10 @@
      (caption-angle-rad 0)
 
      ; for rounding zigzag widths to nearest sensible value:
-     (dist-y (- y-upper y-lower))
+     (dist-y (- y-l-upper y-l-lower))
      (cnt (if (= 0 l-zigzag-width) 0 (round (/ dist-y l-zigzag-width))))
      (l-zigzag-width (if (= cnt 0) 0 (/ dist-y cnt)))
+     (dist-y (- y-r-upper y-r-lower))
      (cnt (if (= 0 r-zigzag-width) 0 (round (/ dist-y r-zigzag-width))))
      (r-zigzag-width (if (= cnt 0) 0 (/ dist-y cnt)))
 
@@ -1301,8 +1302,9 @@ another = \relative c' {
   \override Score.MusicBoxer.border-color = #(rgb-color 1 0.4 0.0)
   \override Score.MusicBoxer.color = #(rgb-color 1 0.9 0.8)
   \once \override Score.MusicBoxer.caption = "up:"
-  \override Score.MusicBoxer.y-upper = #'(-1 . 0)
-  \override Score.MusicBoxer.y-lower = #'(0  . 1)
+  \once \override Score.MusicBoxer.y-upper = #'(-1 . 0)
+  \once \override Score.MusicBoxer.y-lower = #'(0  . 1)
+  \once \override Score.MusicBoxer.caption-translate-x = #0.5
   \musicBoxerStart
   e,4^\markup \column { " "    "manually moving corners to indicate melody direction:"    " "     " " }
   e f
@@ -1311,6 +1313,8 @@ another = \relative c' {
   \override Score.MusicBoxer.border-color = #red
   \override Score.MusicBoxer.color = #(rgb-color 1 0.8 0.8)
   \once \override Score.MusicBoxer.caption = "down:"
+  \once \override Score.MusicBoxer.y-upper = #'(0 . -1)
+  \once \override Score.MusicBoxer.y-lower = #'(1 .  0)
   \musicBoxerStart
   e4 e d
   \musicBoxerEnd
